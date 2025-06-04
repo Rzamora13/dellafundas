@@ -1,0 +1,76 @@
+version: "3.9"
+
+services:
+  backend-php:
+    build:
+      context: ./backend
+    container_name: symfony_php
+    volumes:
+      - ./backend:/var/www/html
+    networks:
+      - app
+    depends_on:
+      - db
+
+  backend-nginx:
+    image: nginx:alpine
+    container_name: symfony_nginx
+    volumes:
+      - ./backend:/var/www/html
+      - ./backend/nginx.conf:/etc/nginx/conf.d/default.conf
+    ports:
+      - "8080:80"
+    networks:
+      - app
+    depends_on:
+      - backend-php
+
+  db:
+    image: mysql:8.0
+    container_name: symfony_db
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: dellafundas
+      MYSQL_USER: symfony
+      MYSQL_PASSWORD: symfony
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - app
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: tfg_frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    working_dir: /app
+    command: npm run dev -- --host
+    networks:
+      - app
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: symfony_phpmyadmin
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "8081:80"
+    depends_on:
+      - db
+    networks:
+      - app
+
+networks:
+  app:
+    driver: bridge
+
+volumes:
+  db_data:
